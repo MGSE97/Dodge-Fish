@@ -6,4 +6,9 @@
     android:layout_height="match_parent"
     tools:context=".GameActivity">
 
+    <cz.mgsoft.gai0006.dodgefish.GameView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/DodgeFish" />
+
 </android.support.constraint.ConstraintLayout>
