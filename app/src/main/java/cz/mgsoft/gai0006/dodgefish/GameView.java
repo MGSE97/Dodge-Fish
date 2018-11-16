@@ -4,19 +4,24 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.DrawFilter;
+import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.os.AsyncTask;
+import android.graphics.Typeface;
 import android.os.StrictMode;
+import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Size;
 import android.view.View;
+import android.view.Window;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.Timer;
-import java.util.TimerTask;
 
 public class GameView extends View {
 
@@ -27,8 +32,16 @@ public class GameView extends View {
     private int Height;
     private int MoveX;
     private int MoveY;
+    public int Lerp = 0;
 
-    private int UpdateDelay = 50;
+    public int FPS = 0;
+    private int _fps = 0;
+    public int UPS = 0;
+    private int _ups = 0;
+    private long LastUpdate = 0;
+    private long LastUi = 0;
+    public int RedrawDelay = 15;
+    public int UpdateDelay = 30;
 
     private Size Size = new Size(7,12);
     private Point Player = new Point(3,10);
@@ -37,7 +50,9 @@ public class GameView extends View {
 
     private int[] Map;
 
+    private GameUpdateTask UpdateTimerTask;
     private Timer UpdateTimer;
+    private Random Generator;
 
     public GameView(Context context) {
         super(context);
@@ -66,24 +81,34 @@ public class GameView extends View {
 
         // Build spawns
         Spawns = new ArrayList<>();
-        ArrayList<Integer> fishes = new ArrayList<>();
+        /*ArrayList<Integer> fishes = new ArrayList<>();
         int[] data = new int[Size.getWidth()];
         for (int count = 0; count < (Size.getWidth() - 1); count++)
         {
             combinationBuilder(fishes, data, 0, fishes.size(), 0, Size.getWidth());
-            Log.d("Game", "Combinations" + Integer.toString(Spawns.size()));
+            Log.d("Game", "Combinations " + Integer.toString(Spawns.size()));
             fishes.add(1);
+        }*/
+        for(int t = 0; t < Size.getWidth();t++)
+        {
+            int[] data = new int[Size.getWidth()];
+            for(int n = 0; n < Size.getWidth();n++)
+                data[n] = 0;
+            data[t] = 1;
+            Spawns.add(data);
         }
+        Log.d("Game", "Spawns " + Integer.toString(Spawns.size()));
 
         // Update
         UpdateTimer = new Timer();
+        Generator = new Random(1);
+        UpdateTimerTask = new GameUpdateTask(this);
 
         // Create map
         Map = new int[Size.getWidth()*Size.getHeight()];
-        for(int i = 0; i < Map.length; i++)
-            Map[i] = 0;
 
         Log.d("Game", "Init Complete");
+        Start();
     }
 
     public void AddTexture(String name, int resource)
@@ -95,12 +120,7 @@ public class GameView extends View {
     {
         Log.d("Game", "Started");
         Stopped = false;
-        UpdateTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                Update();
-            }
-        }, UpdateDelay);
+        UpdateTimer.schedule(UpdateTimerTask, RedrawDelay, RedrawDelay);
     }
 
     public void Stop()
@@ -112,24 +132,54 @@ public class GameView extends View {
 
     protected void Update()
     {
-        Log.d("Game", "Update");
-
         // Move all enemies down
         for(int y = Size.getHeight()-1; y > 0; y--)
             for(int x = 0; x < Size.getWidth(); x++)
                 Map[y*Size.getWidth()+x] = Map[(y-1)*Size.getWidth()+x];
 
-        // ToDo Spawn new one
-        
+        // Spawn new ones
+        int i = Generator.nextInt(Spawns.size());
+        for(int x = 0; x < Size.getWidth(); x++)
+            Map[x] = Spawns.get(i)[x];
+
+        invalidate();
+    }
+
+    protected void Redraw(){
+        long time = System.currentTimeMillis()-LastUpdate;
+        if(time >= 1000) {
+            FPS = _fps;
+            _fps = 0;
+            LastUpdate = System.currentTimeMillis();
+        }
+        _fps++;
         invalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        Log.d("Game", "Draw "+Integer.toString(Width)+","+Integer.toString(Height));
+
+        long time = System.currentTimeMillis()-LastUi;
+        if(time >= 1000) {
+            UPS = _ups;
+            _ups = 0;
+            LastUi = System.currentTimeMillis();
+        }
+        _ups++;
+
         canvas.drawBitmap(Textures.get("sea"), null, new Rect(0,0, Width, Height), null);
-        canvas.drawBitmap(Textures.get("player"), null, GetFish(Player), null);
+        canvas.drawBitmap(Textures.get("player"), null, GetFish(Player.x, Player.y, true), null);
+        for(int y = 0; y < Size.getHeight(); y++)
+            for(int x = 0; x < Size.getWidth(); x++)
+                if(Map[y*Size.getWidth()+x] == 1)
+                    canvas.drawBitmap(Textures.get("enemy"), null, GetFish(x, y, false), null);
+
+        Paint paint = new Paint();
+        paint.setColor(Color.WHITE);
+        paint.setTextSize(20);
+        paint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS), 0, (0+paint.getTextSize()), paint);
     }
 
     @Override
@@ -165,19 +215,19 @@ public class GameView extends View {
         }
     }
 
-    protected Rect GetFish(Point position)
+    protected Rect GetFish(int x, int y, boolean player)
     {
-        return new Rect(GetX(position.x),GetY(position.y),GetX(position.x+1), GetY(position.y+1));
+        return new Rect(GetX(x, player), GetY(y, player), GetX(x+1, player), GetY(y+1, player));
     }
 
-    protected int GetX(int x)
+    protected int GetX(int x, boolean player)
     {
-        return MoveX*x;
+        return (int)(MoveX*x+(player?(MoveX*Lerp/(float)UpdateDelay):0));
     }
 
-    protected int GetY(int y)
+    protected int GetY(int y, boolean player)
     {
-        return MoveY*y;
+        return (int)(MoveY*y+(player?0:(MoveY*Lerp/(float)UpdateDelay)));
     }
 }
 
