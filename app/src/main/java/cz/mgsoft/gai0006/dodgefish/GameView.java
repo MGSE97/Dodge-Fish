@@ -15,6 +15,7 @@ import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Size;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 
@@ -33,6 +34,8 @@ public class GameView extends View {
     private int MoveX;
     private int MoveY;
     public int Lerp = 0;
+    public int PlyerLerpSide = 0;
+    public int NextPlyerLerpSide = 0;
 
     public int FPS = 0;
     private int _fps = 0;
@@ -142,6 +145,23 @@ public class GameView extends View {
         for(int x = 0; x < Size.getWidth(); x++)
             Map[x] = Spawns.get(i)[x];
 
+        // Update player
+        switch (PlyerLerpSide)
+        {
+            case -1:
+                // Left
+                if(Player.x > 0)
+                    Player.x--;
+                break;
+            case 1:
+                // Right
+                if(Player.x < (Size.getWidth()-1))
+                    Player.x++;
+                break;
+        }
+        PlyerLerpSide = NextPlyerLerpSide;
+        NextPlyerLerpSide = 0;
+
         invalidate();
     }
 
@@ -179,7 +199,7 @@ public class GameView extends View {
         paint.setColor(Color.WHITE);
         paint.setTextSize(20);
         paint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS), 0, (0+paint.getTextSize()), paint);
+        canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS)+"   Player["+Integer.toString(Player.x)+","+Integer.toString(Player.y) + "]", 0, (0+paint.getTextSize()), paint);
     }
 
     @Override
@@ -191,11 +211,36 @@ public class GameView extends View {
         super.onSizeChanged(w, h, oldw, oldh);
     }
 
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch (event.getAction())
+        {
+            case MotionEvent.ACTION_DOWN:
+                int x = (int)event.getX();
+                if(x < MoveX*3) {
+                    // Left
+                    if(Player.x > 1 || (Player.x == 1 && PlyerLerpSide > -1))
+                        NextPlyerLerpSide = -1;
+                }
+                else if(x > (Width-MoveX*3))
+                {
+                    // Right
+                    if(Player.x < (Size.getWidth()-2) || (Player.x < (Size.getWidth()-1) && PlyerLerpSide < 1))
+                        NextPlyerLerpSide = 1;
+                }
+                else
+                    NextPlyerLerpSide = 0;
+                break;
+        }
+
+        return super.onTouchEvent(event);
+    }
+
     /* arr[]  ---> Input Array
-    data[] ---> Temporary array to store current combination
-    start & end ---> Staring and Ending indexes in arr[]
-    index  ---> Current index in data[]
-    r ---> Size of a combination to be printed */
+        data[] ---> Temporary array to store current combination
+        start & end ---> Staring and Ending indexes in arr[]
+        index  ---> Current index in data[]
+        r ---> Size of a combination to be printed */
     protected void combinationBuilder(ArrayList<Integer> arr, int data[], int start, int end, int index, int size)
     {
         // Current combination is ready to be printed, print it
@@ -222,7 +267,7 @@ public class GameView extends View {
 
     protected int GetX(int x, boolean player)
     {
-        return (int)(MoveX*x+(player?(MoveX*Lerp/(float)UpdateDelay):0));
+        return (int)(MoveX*x+(player?(MoveX*(Lerp*PlyerLerpSide)/(float)UpdateDelay):0));
     }
 
     protected int GetY(int y, boolean player)
