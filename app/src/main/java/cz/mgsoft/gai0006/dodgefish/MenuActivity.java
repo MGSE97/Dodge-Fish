@@ -19,19 +19,19 @@ public class MenuActivity extends Activity {
         setContentView(R.layout.activity_menu);
     }
 
-    protected void launchGame(View v)
+    public void launchGame(View v)
     {
         Intent intent = new Intent(this, GameActivity.class);
         startActivity(intent);
     }
 
-    protected void showLeaderboard(View v)
+    public void showLeaderboard(View v)
     {
         Intent intent = new Intent(this, LeaderBoardActivity.class);
         startActivity(intent);
     }
 
-    protected void exitApp(View v)
+    public void exitApp(View v)
     {
         android.os.Process.killProcess(android.os.Process.myPid());
         System.exit(1);
