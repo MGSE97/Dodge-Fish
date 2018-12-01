@@ -19,6 +19,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
@@ -45,6 +46,9 @@ public class GameView extends View {
     private long LastUi = 0;
     public int RedrawDelay = 15;
     public int UpdateDelay = 30;
+
+    public int Score = 0;
+    private int TargetScore = 2;
 
     private Size Size = new Size(7,12);
     private Point Player = new Point(3,10);
@@ -81,6 +85,7 @@ public class GameView extends View {
         AddTexture("sea", R.drawable.sea);
         AddTexture("player", R.drawable.fish_player);
         AddTexture("enemy", R.drawable.fish_enemy);
+        AddTexture("hit", R.drawable.fish_enemy_hitted);
 
         // Build spawns
         Spawns = new ArrayList<>();
@@ -135,6 +140,12 @@ public class GameView extends View {
 
     protected void Update()
     {
+        Score++;
+        if(UpdateDelay > 4 && Score == TargetScore) {
+            UpdateDelay -= 2;
+            TargetScore *= 2;
+        }
+
         // Move all enemies down
         for(int y = Size.getHeight()-1; y > 0; y--)
             for(int x = 0; x < Size.getWidth(); x++)
@@ -161,6 +172,10 @@ public class GameView extends View {
         }
         PlyerLerpSide = NextPlyerLerpSide;
         NextPlyerLerpSide = 0;
+
+        // Check hits
+        if(Map[Player.y * Size.getWidth() + Player.x] == 1)
+            Map[Player.y * Size.getWidth() + Player.x] = 2;
 
         invalidate();
     }
@@ -191,15 +206,26 @@ public class GameView extends View {
         canvas.drawBitmap(Textures.get("sea"), null, new Rect(0,0, Width, Height), null);
         canvas.drawBitmap(Textures.get("player"), null, GetFish(Player.x, Player.y, true), null);
         for(int y = 0; y < Size.getHeight(); y++)
-            for(int x = 0; x < Size.getWidth(); x++)
-                if(Map[y*Size.getWidth()+x] == 1)
-                    canvas.drawBitmap(Textures.get("enemy"), null, GetFish(x, y, false), null);
+            for(int x = 0; x < Size.getWidth(); x++) {
+                String texture = null;
+                switch (Map[y * Size.getWidth() + x])
+                {
+                    case 1:
+                        texture = "enemy";
+                        break;
+                    case 2:
+                        texture = "hit";
+                        break;
+                }
+                if(texture != null)
+                    canvas.drawBitmap(Textures.get(texture), null, GetFish(x, y, false), null);
+            }
 
         Paint paint = new Paint();
         paint.setColor(Color.WHITE);
         paint.setTextSize(20);
         paint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS)+"   Player["+Integer.toString(Player.x)+","+Integer.toString(Player.y) + "]", 0, (0+paint.getTextSize()), paint);
+        canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS)+"   Player["+Integer.toString(Player.x)+","+Integer.toString(Player.y) + "]   Score: "+Integer.toString(Score)+"/"+Integer.toString(TargetScore)+"   Speed: "+Integer.toString((32-UpdateDelay)/2), 0, (0+paint.getTextSize()), paint);
     }
 
     @Override
