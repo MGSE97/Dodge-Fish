@@ -47,8 +47,11 @@ public class GameView extends View {
     public int RedrawDelay = 15;
     public int UpdateDelay = 30;
 
+    public int Speed = 1;
     public int Score = 0;
-    private int TargetScore = 2;
+    private int TargetScore = 12;
+
+    public boolean Debug = false;
 
     private Size Size = new Size(7,12);
     private Point Player = new Point(3,10);
@@ -86,6 +89,7 @@ public class GameView extends View {
         AddTexture("player", R.drawable.fish_player);
         AddTexture("enemy", R.drawable.fish_enemy);
         AddTexture("hit", R.drawable.fish_enemy_hitted);
+        AddTexture("debug", R.drawable.debug);
 
         // Build spawns
         Spawns = new ArrayList<>();
@@ -113,7 +117,7 @@ public class GameView extends View {
         UpdateTimerTask = new GameUpdateTask(this);
 
         // Create map
-        Map = new int[Size.getWidth()*Size.getHeight()];
+        Map = new int[Size.getWidth()*(Size.getHeight()+1)];
 
         Log.d("Game", "Init Complete");
         Start();
@@ -143,11 +147,12 @@ public class GameView extends View {
         Score++;
         if(UpdateDelay > 4 && Score == TargetScore) {
             UpdateDelay -= 2;
-            TargetScore *= 2;
+            TargetScore += 10*Speed;
+            Speed++;
         }
 
         // Move all enemies down
-        for(int y = Size.getHeight()-1; y > 0; y--)
+        for(int y = Size.getHeight(); y > 0; y--)
             for(int x = 0; x < Size.getWidth(); x++)
                 Map[y*Size.getWidth()+x] = Map[(y-1)*Size.getWidth()+x];
 
@@ -174,8 +179,8 @@ public class GameView extends View {
         NextPlyerLerpSide = 0;
 
         // Check hits
-        if(Map[Player.y * Size.getWidth() + Player.x] == 1)
-            Map[Player.y * Size.getWidth() + Player.x] = 2;
+        if(Map[(Player.y) * Size.getWidth() + Player.x] == 1)
+            Map[(Player.y) * Size.getWidth() + Player.x] = 2;
 
         invalidate();
     }
@@ -205,7 +210,14 @@ public class GameView extends View {
 
         canvas.drawBitmap(Textures.get("sea"), null, new Rect(0,0, Width, Height), null);
         canvas.drawBitmap(Textures.get("player"), null, GetFish(Player.x, Player.y, true), null);
-        for(int y = 0; y < Size.getHeight(); y++)
+
+        if(Debug)
+            for(int y = 0; y < Size.getHeight()+1; y++)
+                for(int x = 0; x < Size.getWidth(); x++)
+                    if(Map[y * Size.getWidth() + x] > 0)
+                        canvas.drawBitmap(Textures.get("debug"), null, GetFishRaw(x, y), null);
+
+        for(int y = 0; y < Size.getHeight()+1; y++)
             for(int x = 0; x < Size.getWidth(); x++) {
                 String texture = null;
                 switch (Map[y * Size.getWidth() + x])
@@ -221,11 +233,19 @@ public class GameView extends View {
                     canvas.drawBitmap(Textures.get(texture), null, GetFish(x, y, false), null);
             }
 
-        Paint paint = new Paint();
-        paint.setColor(Color.WHITE);
-        paint.setTextSize(20);
-        paint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS)+"   Player["+Integer.toString(Player.x)+","+Integer.toString(Player.y) + "]   Score: "+Integer.toString(Score)+"/"+Integer.toString(TargetScore)+"   Speed: "+Integer.toString((32-UpdateDelay)/2), 0, (0+paint.getTextSize()), paint);
+        Paint score = new Paint();
+        score.setColor(Color.rgb(255,140,0));
+        score.setTextSize(60);
+        score.setTextAlign(Paint.Align.LEFT);
+        //canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS)+"   Player["+Integer.toString(Player.x)+","+Integer.toString(Player.y) + "]   Score: "+Integer.toString(Score)+"/"+Integer.toString(TargetScore)+"   Speed: "+Integer.toString(Speed), 0, (0+paint.getTextSize()), paint);
+        canvas.drawText(Integer.toString(Score)+ " m",10, (10+score.getTextSize()), score);
+
+        Paint speed = new Paint();
+        speed.setColor(Color.GREEN);
+        speed.setTextSize(40);
+        speed.setTextAlign(Paint.Align.RIGHT);
+        String text = Integer.toString(Speed)+ " m/s";
+        canvas.drawText(text, Width-10, (10+speed.getTextSize()), speed);
     }
 
     @Override
@@ -298,7 +318,22 @@ public class GameView extends View {
 
     protected int GetY(int y, boolean player)
     {
-        return (int)(MoveY*y+(player?0:(MoveY*Lerp/(float)UpdateDelay)));
+        return (int)(MoveY*y+(player?0:(float)(-MoveY)+(MoveY*Lerp/(float)UpdateDelay)));
+    }
+
+    protected Rect GetFishRaw(int x, int y)
+    {
+        return new Rect(GetXRaw(x), GetYRaw(y), GetXRaw(x+1), GetYRaw(y+1));
+    }
+
+    protected int GetXRaw(int x)
+    {
+        return MoveX*x;
+    }
+
+    protected int GetYRaw(int y)
+    {
+        return MoveY*y;
     }
 }
 
