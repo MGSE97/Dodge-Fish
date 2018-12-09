@@ -10,8 +10,14 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.media.MediaPlayer;
 import android.os.StrictMode;
 import android.os.SystemClock;
+import android.provider.MediaStore;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Size;
@@ -26,6 +32,12 @@ import java.util.Random;
 import java.util.Timer;
 
 public class GameView extends View {
+
+    public boolean UseGyroscope = false;
+    public Sensor GyroscopeSensor = null;
+    public SensorEventListener GyroscopeListener = null;
+
+    private HashMap<String, MediaPlayer> Audio;
 
     HashMap<String, Bitmap> Textures;
     private boolean Stopped;
@@ -46,6 +58,9 @@ public class GameView extends View {
     private long LastUi = 0;
     public int RedrawDelay = 15;
     public int UpdateDelay = 30;
+
+    public float CenterAngle = 0;
+    private int CalibrationCount = 0;
 
     public int Speed = 1;
     public int Score = 0;
@@ -82,6 +97,13 @@ public class GameView extends View {
     protected void init(Context context) {
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
+
+        Audio = new HashMap<>();
+        AddAudio("background", R.raw.game_running);
+        AddAudio("speedup", R.raw.speed_up);
+        AddAudio("end", R.raw.game_over);
+        Audio.get("background").setLooping(true);
+        Audio.get("background").setPlaybackParams(Audio.get("background").getPlaybackParams().setSpeed(0.5f+Speed/20.0f));
 
         // Set textures
         Textures = new HashMap<>();
@@ -128,11 +150,17 @@ public class GameView extends View {
         Textures.put(name, BitmapFactory.decodeResource(getResources(), resource));
     }
 
+    public void AddAudio(String name, int resource)
+    {
+        Audio.put(name, MediaPlayer.create(getContext(), resource));
+    }
+
     public void Start()
     {
         Log.d("Game", "Started");
         Stopped = false;
         UpdateTimer.schedule(UpdateTimerTask, RedrawDelay, RedrawDelay);
+        Audio.get("background").start();
     }
 
     public void Stop()
@@ -140,6 +168,7 @@ public class GameView extends View {
         Log.d("Game", "Stopped");
         Stopped = true;
         UpdateTimer.cancel();
+        Audio.get("background").stop();
     }
 
     protected void Update()
@@ -149,6 +178,8 @@ public class GameView extends View {
             UpdateDelay -= 2;
             TargetScore += 10*Speed;
             Speed++;
+            Audio.get("speedup").start();
+            Audio.get("background").setPlaybackParams(Audio.get("background").getPlaybackParams().setSpeed(0.5f+Speed/20.0f));
         }
 
         // Move all enemies down
@@ -179,8 +210,11 @@ public class GameView extends View {
         NextPlyerLerpSide = 0;
 
         // Check hits
-        if(Map[(Player.y) * Size.getWidth() + Player.x] == 1)
+        if(Map[(Player.y) * Size.getWidth() + Player.x] == 1) {
+            // Hit
             Map[(Player.y) * Size.getWidth() + Player.x] = 2;
+            Audio.get("end").start();
+        }
 
         invalidate();
     }
@@ -259,6 +293,7 @@ public class GameView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if(!UseGyroscope || GyroscopeSensor == null || GyroscopeListener == null)
         switch (event.getAction())
         {
             case MotionEvent.ACTION_DOWN:
@@ -334,6 +369,60 @@ public class GameView extends View {
     protected int GetYRaw(int y)
     {
         return MoveY*y;
+    }
+
+    public void CreateGyroscopeListener(SensorManager manager) {
+         GyroscopeListener = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent sensorEvent) {
+                // get matrix
+                float[] rotationMatrix = new float[16];
+                SensorManager.getRotationMatrixFromVector(rotationMatrix, sensorEvent.values);
+
+                // Remap coordinate system
+                float[] remappedRotationMatrix = new float[16];
+                SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, remappedRotationMatrix);
+
+                // Convert to orientations
+                float[] orientations = new float[3];
+                SensorManager.getOrientation(remappedRotationMatrix, orientations);
+
+                // To DEG
+                for (int i = 0; i < 3; i++)
+                    orientations[i] = (float) (Math.toDegrees(orientations[i]));
+
+                //Log.d("gamesensors", Float.toString(orientations[0]) + "," + Float.toString(orientations[1]) + "," + Float.toString(orientations[2]));
+
+                // Calibration
+                if (Score < 6){
+                    CenterAngle += orientations[2];
+                    CalibrationCount++;
+                }
+                else if (Score == 6)
+                    CenterAngle /= (float)CalibrationCount;
+                else
+                    // Set data
+                    if (orientations[2] > CenterAngle + 45) {
+                        // Right
+                        if(Player.x < (Size.getWidth()-2) || (Player.x < (Size.getWidth()-1) && PlyerLerpSide < 1))
+                            NextPlyerLerpSide = 1;
+                    } else if (orientations[2] < CenterAngle - 45) {
+                        // Left
+                        if(Player.x > 1 || (Player.x == 1 && PlyerLerpSide > -1))
+                            NextPlyerLerpSide = -1;
+                    } else if (Math.abs(orientations[2]) < CenterAngle + 30) {
+                        NextPlyerLerpSide = 0;
+                    }
+
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int i) {
+            }
+        };
+
+        // Register the listener
+        manager.registerListener(GyroscopeListener, GyroscopeSensor, SensorManager.SENSOR_DELAY_GAME);
     }
 }
 

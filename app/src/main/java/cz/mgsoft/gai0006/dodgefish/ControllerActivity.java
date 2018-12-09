@@ -2,15 +2,16 @@ package cz.mgsoft.gai0006.dodgefish;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageButton;
 
-//font - https://stackoverflow.com/questions/2888508/how-to-change-the-font-on-the-textview
-
-public class MenuActivity extends Activity {
+public class ControllerActivity extends Activity {
 
     MediaPlayer mediaPlayer;
 
@@ -19,29 +20,29 @@ public class MenuActivity extends Activity {
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_menu);
+        setContentView(R.layout.activity_controller);
+
+        SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        Sensor gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        findViewById(R.id.imageButtonRotation).setEnabled(gyroscopeSensor != null);
+
 
         mediaPlayer = MediaPlayer.create(this, R.raw.button_click);
     }
 
-    public void launchGame(View v)
+    public void launchGameClick(View v)
     {
         mediaPlayer.start();
-        Intent intent = new Intent(this, ControllerActivity.class);
+        Intent intent = new Intent(this, GameActivity.class);
+        intent.putExtra("controller", "click");
         startActivity(intent);
     }
 
-    public void showLeaderboard(View v)
+    public void launchGameRotation(View v)
     {
         mediaPlayer.start();
-        Intent intent = new Intent(this, LeaderBoardActivity.class);
+        Intent intent = new Intent(this, GameActivity.class);
+        intent.putExtra("controller", "rotation");
         startActivity(intent);
-    }
-
-    public void exitApp(View v)
-    {
-        mediaPlayer.start();
-        android.os.Process.killProcess(android.os.Process.myPid());
-        System.exit(1);
     }
 }

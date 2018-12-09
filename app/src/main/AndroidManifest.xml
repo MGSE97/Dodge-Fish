@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="cz.mgsoft.gai0006.dodgefish">
 
+    <uses-feature
+        android:name="android.hardware.sensor.gyroscope"
+        android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -16,9 +20,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".GameActivity"
-            android:screenOrientation="portrait"/>
-        <activity android:name=".LeaderBoardActivity"></activity>
+        <activity
+            android:name=".GameActivity"
+            android:screenOrientation="portrait" />
+        <activity android:name=".LeaderBoardActivity" />
+        <activity android:name=".ControllerActivity"></activity>
     </application>
 
 </manifest>
