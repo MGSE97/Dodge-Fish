@@ -41,6 +41,7 @@ public class GameView extends View {
 
     HashMap<String, Bitmap> Textures;
     private boolean Stopped;
+    private boolean Failed = false;
     private int Force = 10;
     private int Width;
     private int Height;
@@ -159,6 +160,7 @@ public class GameView extends View {
     {
         Log.d("Game", "Started");
         Stopped = false;
+        Failed = false;
         UpdateTimer.schedule(UpdateTimerTask, RedrawDelay, RedrawDelay);
         Audio.get("background").start();
     }
@@ -169,6 +171,10 @@ public class GameView extends View {
         Stopped = true;
         UpdateTimer.cancel();
         Audio.get("background").stop();
+    }
+
+    public void GameOver(){
+        Failed = true;
     }
 
     protected void Update()
@@ -214,6 +220,8 @@ public class GameView extends View {
             // Hit
             Map[(Player.y) * Size.getWidth() + Player.x] = 2;
             Audio.get("end").start();
+            Stop();
+            GameOver();
         }
 
         invalidate();
@@ -230,6 +238,84 @@ public class GameView extends View {
         invalidate();
     }
 
+    public void DrawStatic(Canvas canvas){
+        canvas.drawBitmap(Textures.get("sea"), null, new Rect(0, 0, Width, Height), null);
+        canvas.drawBitmap(Textures.get("player"), null, GetFish(Player.x, Player.y, true), null);
+    }
+
+    public void DrawDebug(Canvas canvas) {
+        for (int y = 0; y < Size.getHeight() + 1; y++)
+            for (int x = 0; x < Size.getWidth(); x++)
+                if (Map[y * Size.getWidth() + x] > 0)
+                    canvas.drawBitmap(Textures.get("debug"), null, GetFishRaw(x, y), null);
+    }
+
+    public void DrawEnemies(Canvas canvas){
+        for (int y = 0; y < Size.getHeight() + 1; y++)
+            for (int x = 0; x < Size.getWidth(); x++) {
+                String texture = null;
+                switch (Map[y * Size.getWidth() + x]) {
+                    case 1:
+                        texture = "enemy";
+                        break;
+                    case 2:
+                        texture = "hit";
+                        break;
+                }
+                if (texture != null)
+                    canvas.drawBitmap(Textures.get(texture), null, GetFish(x, y, false), null);
+            }
+    }
+
+    public void DrawStats(Canvas canvas){
+        Paint score = new Paint();
+        score.setColor(Color.rgb(255, 140, 0));
+        score.setTextSize(60);
+        score.setTextAlign(Paint.Align.LEFT);
+        //canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS)+"   Player["+Integer.toString(Player.x)+","+Integer.toString(Player.y) + "]   Score: "+Integer.toString(Score)+"/"+Integer.toString(TargetScore)+"   Speed: "+Integer.toString(Speed), 0, (0+paint.getTextSize()), paint);
+        canvas.drawText(Integer.toString(Score) + " m", 10, (10 + score.getTextSize()), score);
+
+        Paint speed = new Paint();
+        speed.setColor(Color.GREEN);
+        speed.setTextSize(40);
+        speed.setTextAlign(Paint.Align.RIGHT);
+        String text = Integer.toString(Speed) + " m/s";
+        canvas.drawText(text, Width - 10, (10 + speed.getTextSize()), speed);
+    }
+
+    public void DrawGameOver(Canvas canvas){
+        canvas.drawARGB(150, 0,0,0);
+
+        Paint end = new Paint();
+        end.setColor(Color.RED);
+        end.setTextSize(Height/10);
+        end.setTextAlign(Paint.Align.CENTER);
+        Typeface ctf =  end.getTypeface();
+        Typeface bold = Typeface.create(ctf, Typeface.BOLD);
+        end.setTypeface(bold);
+        canvas.drawText("Game Over!", Width/2, Height/4 + end.getTextSize(), end);
+
+
+        Paint score = new Paint();
+        score.setColor(Color.rgb(255, 140, 0));
+        score.setTextSize(Height/12);
+        score.setTextAlign(Paint.Align.CENTER);
+        Typeface ctf2 =  score.getTypeface();
+        Typeface bold2 = Typeface.create(ctf2, Typeface.BOLD);
+        score.setTypeface(bold2);
+        canvas.drawText(Integer.toString(Score) + " m", Width/2, 2*Height/4 + score.getTextSize(), score);
+
+        Paint speed = new Paint();
+        speed.setColor(Color.GREEN);
+        speed.setTextSize(Height/14);
+        speed.setTextAlign(Paint.Align.CENTER);
+        Typeface ctf3 =  speed.getTypeface();
+        Typeface bold3 = Typeface.create(ctf3, Typeface.BOLD);
+        speed.setTypeface(bold3);
+        canvas.drawText(Integer.toString(Speed) + " m/s", Width/2, 2.5f*Height/4 + speed.getTextSize(), speed);
+    }
+
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -242,44 +328,15 @@ public class GameView extends View {
         }
         _ups++;
 
-        canvas.drawBitmap(Textures.get("sea"), null, new Rect(0,0, Width, Height), null);
-        canvas.drawBitmap(Textures.get("player"), null, GetFish(Player.x, Player.y, true), null);
+        DrawStatic(canvas);
+        if (Debug)
+           DrawDebug(canvas);
 
-        if(Debug)
-            for(int y = 0; y < Size.getHeight()+1; y++)
-                for(int x = 0; x < Size.getWidth(); x++)
-                    if(Map[y * Size.getWidth() + x] > 0)
-                        canvas.drawBitmap(Textures.get("debug"), null, GetFishRaw(x, y), null);
+        DrawEnemies(canvas);
+        DrawStats(canvas);
 
-        for(int y = 0; y < Size.getHeight()+1; y++)
-            for(int x = 0; x < Size.getWidth(); x++) {
-                String texture = null;
-                switch (Map[y * Size.getWidth() + x])
-                {
-                    case 1:
-                        texture = "enemy";
-                        break;
-                    case 2:
-                        texture = "hit";
-                        break;
-                }
-                if(texture != null)
-                    canvas.drawBitmap(Textures.get(texture), null, GetFish(x, y, false), null);
-            }
-
-        Paint score = new Paint();
-        score.setColor(Color.rgb(255,140,0));
-        score.setTextSize(60);
-        score.setTextAlign(Paint.Align.LEFT);
-        //canvas.drawText("FPS: "+Integer.toString(FPS)+ "   UPS: "+Integer.toString(UPS)+"   Player["+Integer.toString(Player.x)+","+Integer.toString(Player.y) + "]   Score: "+Integer.toString(Score)+"/"+Integer.toString(TargetScore)+"   Speed: "+Integer.toString(Speed), 0, (0+paint.getTextSize()), paint);
-        canvas.drawText(Integer.toString(Score)+ " m",10, (10+score.getTextSize()), score);
-
-        Paint speed = new Paint();
-        speed.setColor(Color.GREEN);
-        speed.setTextSize(40);
-        speed.setTextAlign(Paint.Align.RIGHT);
-        String text = Integer.toString(Speed)+ " m/s";
-        canvas.drawText(text, Width-10, (10+speed.getTextSize()), speed);
+        if(Failed)
+            DrawGameOver(canvas);
     }
 
     @Override
