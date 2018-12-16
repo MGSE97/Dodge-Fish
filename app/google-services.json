@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "332551472591",
+    "firebase_url": "https://dodge-fish-1544465287846.firebaseio.com",
+    "project_id": "dodge-fish-1544465287846",
+    "storage_bucket": "dodge-fish-1544465287846.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:332551472591:android:7ea7158a1ff77f6a",
+        "android_client_info": {
+          "package_name": "cz.mgsoft.gai0006.dodgefish"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "332551472591-jaeu2trvqu20vl9qeglds3moe14o1nmp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cz.mgsoft.gai0006.dodgefish",
+            "certificate_hash": "3da3de57068af22a4733a770f73f5526f55b9236"
+          }
+        },
+        {
+          "client_id": "332551472591-k7ubirhl4finjngmcqi8313u3ubnq5ap.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWjDuxQgehF720YY4GiiQrBNMvR1BHKTk"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "332551472591-k7ubirhl4finjngmcqi8313u3ubnq5ap.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

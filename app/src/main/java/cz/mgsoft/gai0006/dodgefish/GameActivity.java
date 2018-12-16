@@ -37,6 +37,8 @@ public class GameActivity extends Activity {
              else
                  gameView.UseGyroscope = false;
          }
+         gameView.UserId = extras.getString("id");
+         gameView.UserName = extras.getString("name");
 
         /*gameView.Start();*/
     }

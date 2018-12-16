@@ -5,6 +5,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/sea"
-    tools:context=".LeaderBoardActivity">
+    tools:context=".LeaderBoardActivity"
+    tools:layout_editor_absoluteY="81dp">
 
+    <ScrollView
+        android:id="@+id/scrollView1"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:layout_alignParentLeft="true">
+
+        <TableLayout
+            android:id="@+id/table_scoreboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:layout_centerHorizontal="true">
+
+        </TableLayout>
+
+    </ScrollView>
 </android.support.constraint.ConstraintLayout>

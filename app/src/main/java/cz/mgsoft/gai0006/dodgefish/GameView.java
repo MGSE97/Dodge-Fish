@@ -18,12 +18,18 @@ import android.media.MediaPlayer;
 import android.os.StrictMode;
 import android.os.SystemClock;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Size;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.lang.annotation.Target;
 import java.util.ArrayList;
@@ -38,6 +44,9 @@ public class GameView extends View {
     public SensorEventListener GyroscopeListener = null;
 
     private HashMap<String, MediaPlayer> Audio;
+
+    public String UserId;
+    public String UserName;
 
     HashMap<String, Bitmap> Textures;
     private boolean Stopped;
@@ -175,6 +184,36 @@ public class GameView extends View {
 
     public void GameOver(){
         Failed = true;
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Create a new dashboard data
+        HashMap<String, Object> data = new HashMap<>();
+        data.put("id", UserId);
+        data.put("name", UserName);
+        data.put("score", Score);
+        data.put("speed", Speed);
+        if(!UseGyroscope || GyroscopeSensor == null || GyroscopeListener == null)
+            // click
+            data.put("mode", 0);
+        else
+            // rotation
+            data.put("mode", 1);
+
+        // Add a new document with a generated ID
+        db.collection("scoreboard")
+                .add(data)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.d("DB", "DocumentSnapshot added with ID: " + documentReference.getId());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("DB", "Error adding document", e);
+                    }
+                });
     }
 
     protected void Update()
